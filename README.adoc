@@ -1,0 +1,70 @@
+== LVGL driver for M5Stack Core2
+
+Use LVGL on a M5Stack Core2 with ESP-IDF, as simply as possible.
+Compared to
+https://github.com/lvgl/lvgl_esp32_drivers[lvgl_esp32_drivers], this:
+
+* Supports the Core2, which is difficult to fit nicely into that project
+because both the PMU and the touch screen are on the same I2C bus. I
+tried, and just about got it working, but it was a mess.
+* Only supports the Core2; this project includes only the necessary
+drivers, with the options hard-coded to make it just work.
+* Includes all board-specific configuration code in one function call.
+
+Compared to the https://github.com/m5stack/M5Core2[M5Core2 library] this
+has less functionality (only display, touch and PMU), but doesn’t
+require Arduino.
+
+== Usage
+
+In your ESP-IDF project, clone this repository into `components`, along
+with lvgl:
+
+[source,shell]
+----
+mkdir components
+git clone https://github.com/lvgl/lvgl.git components/lvgl
+git clone https://github.com/tomjnixon/lvgl_m5core2.git components/lvgl_m5core2
+----
+
+Put these in your `sdkconfig.defaults` file (before building), or use
+`idf.py menuconfig` to set these options:
+
+....
+CONFIG_LV_HOR_RES_MAX=320
+CONFIG_LV_VER_RES_MAX=240
+CONFIG_LV_COLOR_16_SWAP=y
+....
+
+In your main file, you can now `#include "M5Core2.hpp"` and call
+`m5core2_init()` at the start of `app_main`.
+
+When calling lvgl functions, you should lock `gui_mutex`. The nicest way
+to do this is using a `std::lock_guard`:
+
+[source,cpp]
+----
+{
+    std::lock_guard<std::mutex> lk(gui_mutex);
+    // LVGL calls go here
+}
+----
+
+This should also be used when accessing anything on the system I2C or
+SPI buses (PMU, RTC, SD card), except for code that’s in an LVGL
+callback.
+
+== Attribution
+
+This is hacked together from various sources:
+
+* The display and touch drivers are from
+https://github.com/lvgl/lvgl_esp32_drivers[lvgl_esp32_drivers], with
+modifications from
+https://github.com/m5stack/Core2-for-AWS-IoT-EduKit[Core2-for-AWS-IoT-EduKit].
+* Initialisation code is from
+https://github.com/lvgl/lv_port_esp32[lv_port_esp32].
+* PMU code is from https://github.com/m5stack/M5Core2[M5Core2], modified
+to work without Arduino.
+
+The rest is MIT licensed.
